@@ -9,12 +9,12 @@ const isPublicRoute = createRouteMatcher([
   "/api/public/(.*)",
 ]);
 
-export default clerkMiddleware((auth, request) => {
+export default clerkMiddleware(async (auth, request) => {
   if (isPublicRoute(request)) {
     return;
   }
 
-  const authState = auth();
+  const authState = await auth();
   if (!authState?.userId) {
     const signInUrl = new URL("/sign-in", request.url);
     signInUrl.searchParams.set("redirect_url", request.url);
