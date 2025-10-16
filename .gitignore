@@ -1,0 +1,29 @@
+# Environment
+.env
+.env.*
+!.env.example
+web/.env
+web/.env.*
+!web/.env.example
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+web/node_modules/
+.next/
+web/.next/
+web/out/
+
+# Editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Misc
+*.log
+coverage/
