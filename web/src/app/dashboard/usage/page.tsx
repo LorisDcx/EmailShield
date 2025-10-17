@@ -41,9 +41,10 @@ async function fetchUsage(token: string): Promise<UsageResponse> {
 }
 
 export default async function UsagePage() {
-  const { getToken } = auth();
+  const authState = await auth();
   const token =
-    (await getToken({ template: "netlify" })) ?? (await getToken());
+    (await authState?.getToken?.({ template: "netlify" })) ??
+    (await authState?.getToken?.());
 
   if (!token) {
     redirect("/sign-in");
@@ -117,6 +118,7 @@ export default async function UsagePage() {
     </div>
   );
 }
+
 
 
 
