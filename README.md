@@ -91,6 +91,24 @@ The repo is configured for Railway via `Railway.toml`:
 - Start command: `uvicorn app.main:app --host 0.0.0.0 --port ${PORT}`
 - Healthcheck: `/health`
 
+### Railway environment variables
+
+When creating the FastAPI service on Railway, add the following variables under **Environment**:
+
+| Variable | Suggested value | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | Auto-resolves to your managed Postgres instance. |
+| `REDIS_URL` | `${{Redis.REDIS_URL}}` | Required for caching MX lookups and rate-limiting. |
+| `API_KEYS` | `sk_live_example_1,sk_live_example_2` | Comma-separated list of API keys allowed to call the service. |
+| `CACHE_TTL_SECONDS` | `86400` | Suggested verdict TTL returned to clients. |
+| `MX_CACHE_TTL_SECONDS` | `86400` | Redis TTL for MX lookups. |
+| `MX_TIMEOUT_SECONDS` | `1.5` | DNS/MX lookup timeout in seconds. |
+| `RATE_LIMIT_PER_SECOND` | `10` | Per-key rate limit applied on `/v1/check-email`. |
+| `REGION_HINT` | `eu` | Optional, used for logs/metrics tagging. |
+| `SENTRY_DSN` | *(optional)* | Provide if you enable Sentry monitoring. |
+
+Use a `Procfile` (already included) so Railpack runs `uvicorn app.main:app --host 0.0.0.0 --port ${PORT}` by default.
+
 ## Blocklist refresh
 
 Run `python scripts/refresh_blocklist.py` to update `blocklist.txt` from the open-source disposable domain list. Integrate this script into a daily cron job or GitHub Action to keep the blocklist fresh.
