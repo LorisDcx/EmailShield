@@ -1,4 +1,4 @@
-ï»¿import { auth } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { buildApiUrl } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -48,9 +48,10 @@ async function fetchWithToken<T>(path: string, token: string): Promise<T> {
 }
 
 export default async function DashboardHome() {
-  const { getToken } = auth();
+  const authState = await auth();
   const token =
-    (await getToken({ template: "netlify" })) ?? (await getToken());
+    (await authState?.getToken?.({ template: "netlify" })) ??
+    (await authState?.getToken?.());
 
   if (!token) {
     redirect("/sign-in");
@@ -145,8 +146,8 @@ export default async function DashboardHome() {
                   <div className="flex flex-col">
                     <span className="font-medium">{point.date}</span>
                     <span className="text-xs text-muted-foreground">
-                      {point.ok.toLocaleString()} ok Â· {" "}
-                      {point.suspect.toLocaleString()} suspect Â· {" "}
+                      {point.ok.toLocaleString()} ok · {" "}
+                      {point.suspect.toLocaleString()} suspect · {" "}
                       {point.disposable.toLocaleString()} disposable
                     </span>
                   </div>
@@ -161,5 +162,4 @@ export default async function DashboardHome() {
     </div>
   );
 }
-
 
