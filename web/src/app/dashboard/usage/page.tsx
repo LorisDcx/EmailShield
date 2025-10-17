@@ -44,7 +44,6 @@ export default async function UsagePage() {
   const authState = await auth();
   const token =
     (await authState?.getToken?.({ template: "netlify" })) ??
-    authState?.sessionToken ??
     (await authState?.getToken?.());
 
   if (!token) {
@@ -151,3 +150,4 @@ export default async function UsagePage() {
     </div>
   );
 }
+
