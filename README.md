@@ -109,6 +109,22 @@ When creating the FastAPI service on Railway, add the following variables under 
 
 Use a `Procfile` (already included) so Railpack runs `uvicorn app.main:app --host 0.0.0.0 --port ${PORT}` by default.
 
+## Database schema
+
+After the Railway variables are configured, apply the schema contained in pi/db/schema.sql to provision the required tables.
+
+Using Railway CLI:
+
+`ash
+railway run --service api -- psql < api/db/schema.sql
+`
+
+Or from the Postgres service page, open the SQL console and paste the contents. The schema creates:
+
+- ccounts (1 row per Clerk user)
+- pi_keys (hashed secrets + metadata)
+- usage_daily (per-day counters for ok/suspect/disposable verdicts)
+
 ## Blocklist refresh
 
 Run `python scripts/refresh_blocklist.py` to update `blocklist.txt` from the open-source disposable domain list. Integrate this script into a daily cron job or GitHub Action to keep the blocklist fresh.
@@ -120,3 +136,4 @@ Run `python scripts/refresh_blocklist.py` to update `blocklist.txt` from the ope
 - Week 3+: DNS optimisations, soft mode/whitelist, landing page, GTM.
 
 See `Projet.md` for the full six-week execution plan.
+
