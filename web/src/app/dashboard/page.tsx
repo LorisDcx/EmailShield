@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+ï»¿import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { buildApiUrl } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -146,8 +146,8 @@ export default async function DashboardHome() {
                   <div className="flex flex-col">
                     <span className="font-medium">{point.date}</span>
                     <span className="text-xs text-muted-foreground">
-                      {point.ok.toLocaleString()} ok · {" "}
-                      {point.suspect.toLocaleString()} suspect · {" "}
+                      {point.ok.toLocaleString()} ok Â· {" "}
+                      {point.suspect.toLocaleString()} suspect Â· {" "}
                       {point.disposable.toLocaleString()} disposable
                     </span>
                   </div>
@@ -162,4 +162,5 @@ export default async function DashboardHome() {
     </div>
   );
 }
+
 
