@@ -1,29 +1,62 @@
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { buildApiUrl } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UsageChart } from "@/components/dashboard/usage-chart";
 import { Badge } from "@/components/ui/badge";
 
-const usageData = [
-  { date: "Oct 11", ok: 820, suspect: 130, disposable: 190 },
-  { date: "Oct 12", ok: 901, suspect: 144, disposable: 211 },
-  { date: "Oct 13", ok: 980, suspect: 152, disposable: 198 },
-  { date: "Oct 14", ok: 1120, suspect: 176, disposable: 242 },
-  { date: "Oct 15", ok: 1255, suspect: 190, disposable: 268 },
-  { date: "Oct 16", ok: 1311, suspect: 204, disposable: 286 },
-];
+export const dynamic = "force-dynamic";
 
-export default function UsagePage() {
-  const total = usageData.reduce(
-    (acc, item) => {
-      acc.ok += item.ok;
-      acc.suspect += item.suspect;
-      acc.disposable += item.disposable;
-      return acc;
+type UsageTotals = {
+  ok: number;
+  suspect: number;
+  disposable: number;
+};
+
+type UsagePoint = {
+  date: string;
+  ok: number;
+  suspect: number;
+  disposable: number;
+};
+
+type UsageResponse = {
+  totals: UsageTotals;
+  series: UsagePoint[];
+};
+
+async function fetchUsage(token: string): Promise<UsageResponse> {
+  const response = await fetch(buildApiUrl("/api/admin-usage"), {
+    headers: {
+      Authorization: `Bearer ${token}`,
     },
-    { ok: 0, suspect: 0, disposable: 0 }
-  );
+    cache: "no-store",
+  });
 
-  const totalChecks = total.ok + total.suspect + total.disposable;
-  const disposableRatio = Math.round((total.disposable / totalChecks) * 100);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch usage: ${response.status}`);
+  }
+
+  return response.json() as Promise<UsageResponse>;
+}
+
+export default async function UsagePage() {
+  const { getToken } = auth();
+  const token =
+    (await getToken({ template: "netlify" })) ?? (await getToken());
+
+  if (!token) {
+    redirect("/sign-in");
+  }
+
+  const usage = await fetchUsage(token);
+
+  const totalChecks =
+    usage.totals.ok + usage.totals.suspect + usage.totals.disposable;
+  const disposableRatio =
+    totalChecks === 0
+      ? 0
+      : Math.round((usage.totals.disposable / totalChecks) * 100);
 
   return (
     <div className="space-y-8">
@@ -41,7 +74,7 @@ export default function UsagePage() {
               Daily verdict breakdown
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Sum of checks grouped by verdict in the past 7 days.
+              Sum of checks grouped by verdict in the past 30 days.
             </p>
           </div>
           <Badge variant="secondary">
@@ -49,14 +82,14 @@ export default function UsagePage() {
           </Badge>
         </CardHeader>
         <CardContent>
-          <UsageChart data={usageData} />
+          <UsageChart data={usage.series} />
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             <div className="rounded-lg border border-border/40 bg-muted/40 p-4">
               <p className="text-xs text-muted-foreground uppercase">
                 OK verdicts
               </p>
               <p className="text-2xl font-semibold">
-                {total.ok.toLocaleString()}
+                {usage.totals.ok.toLocaleString()}
               </p>
             </div>
             <div className="rounded-lg border border-border/40 bg-muted/40 p-4">
@@ -64,7 +97,7 @@ export default function UsagePage() {
                 Suspect
               </p>
               <p className="text-2xl font-semibold">
-                {total.suspect.toLocaleString()}
+                {usage.totals.suspect.toLocaleString()}
               </p>
             </div>
             <div className="rounded-lg border border-border/40 bg-muted/40 p-4">
@@ -72,7 +105,7 @@ export default function UsagePage() {
                 Disposable
               </p>
               <p className="text-2xl font-semibold">
-                {total.disposable.toLocaleString()}
+                {usage.totals.disposable.toLocaleString()}
               </p>
               <p className="text-xs text-muted-foreground">
                 {disposableRatio}% of checks blocked
@@ -84,3 +117,4 @@ export default function UsagePage() {
     </div>
   );
 }
+

@@ -1,46 +1,102 @@
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { buildApiUrl } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-const summaryStats = [
-  { label: "Checks today", value: "1,420", helper: "+12% vs yesterday" },
-  { label: "Disposable blocked", value: "312", helper: "21.9% of total" },
-  { label: "Suspect challenged", value: "104", helper: "Soft mode enabled" },
-  { label: "Cache hit rate", value: "83%", helper: "MX cached in Redis" },
-];
+export const dynamic = "force-dynamic";
 
-const recentVerdicts = [
-  {
-    email: "alpha@mailinator.com",
-    classification: "disposable",
-    score: 1.0,
-    timestamp: "2m ago",
-    reasons: ["domain_blocklist", "keyword_match"],
-  },
-  {
-    email: "growth@startup.io",
-    classification: "ok",
-    score: 0.08,
-    timestamp: "5m ago",
-    reasons: ["mx_ok"],
-  },
-  {
-    email: "promo@tempbox.xyz",
-    classification: "suspect",
-    score: 0.62,
-    timestamp: "8m ago",
-    reasons: ["keyword_match"],
-  },
-  {
-    email: "support@agency.co",
-    classification: "ok",
-    score: 0.12,
-    timestamp: "11m ago",
-    reasons: ["mx_ok"],
-  },
-];
+type UsageTotals = {
+  ok: number;
+  suspect: number;
+  disposable: number;
+};
 
-export default function DashboardHome() {
+type UsagePoint = {
+  date: string;
+  ok: number;
+  suspect: number;
+  disposable: number;
+};
+
+type UsageResponse = {
+  totals: UsageTotals;
+  series: UsagePoint[];
+};
+
+type AccountResponse = {
+  accountId: string;
+  plan: string;
+  quota: number;
+  usage: number;
+};
+
+async function fetchWithToken<T>(path: string, token: string): Promise<T> {
+  const response = await fetch(buildApiUrl(path), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${path}: ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export default async function DashboardHome() {
+  const { getToken } = auth();
+  const token =
+    (await getToken({ template: "netlify" })) ?? (await getToken());
+
+  if (!token) {
+    redirect("/sign-in");
+  }
+
+  const [account, usage] = await Promise.all([
+    fetchWithToken<AccountResponse>("/api/me", token),
+    fetchWithToken<UsageResponse>("/api/admin-usage", token),
+  ]);
+
+  const totalChecks =
+    usage.totals.ok + usage.totals.suspect + usage.totals.disposable;
+  const disposableRatio =
+    totalChecks === 0
+      ? 0
+      : Math.round((usage.totals.disposable / totalChecks) * 100);
+  const suspectRatio =
+    totalChecks === 0
+      ? 0
+      : Math.round((usage.totals.suspect / totalChecks) * 100);
+
+  const summaryStats = [
+    {
+      label: "Checks (30d)",
+      value: totalChecks.toLocaleString(),
+      helper: `Blocked ${disposableRatio}% disposable`,
+    },
+    {
+      label: "Disposable blocked",
+      value: usage.totals.disposable.toLocaleString(),
+      helper: `${disposableRatio}% of traffic`,
+    },
+    {
+      label: "Suspect challenged",
+      value: usage.totals.suspect.toLocaleString(),
+      helper: `${suspectRatio}% flagged soft`,
+    },
+    {
+      label: "Plan",
+      value: account.plan.toUpperCase(),
+      helper: `${account.usage.toLocaleString()} / ${account.quota.toLocaleString()} checks`,
+    },
+  ];
+
+  const recentSeries = usage.series.slice(-5).reverse();
+
   return (
     <div className="space-y-8">
       <div>
@@ -68,45 +124,41 @@ export default function DashboardHome() {
       <Card className="border-border/40 bg-background/80">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
-            Recent verdicts
+            Recent traffic breakdown
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {recentVerdicts.map((item, index) => (
-            <div key={item.email} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="font-medium">{item.email}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {item.reasons.join(" Â· ")}
-                  </span>
+          {recentSeries.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No usage recorded yet. Start sending traffic to see live analytics.
+            </p>
+          )}
+          {recentSeries.map((point, index) => {
+            const dayTotal = point.ok + point.suspect + point.disposable;
+            const disposablePercent =
+              dayTotal === 0
+                ? 0
+                : Math.round((point.disposable / dayTotal) * 100);
+            return (
+              <div key={point.date} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="font-medium">{point.date}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {point.ok.toLocaleString()} ok · {" "}
+                      {point.suspect.toLocaleString()} suspect · {" "}
+                      {point.disposable.toLocaleString()} disposable
+                    </span>
+                  </div>
+                  <Badge variant="secondary">{disposablePercent}% disposable</Badge>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Badge
-                    variant={
-                      item.classification === "disposable"
-                        ? "destructive"
-                        : item.classification === "suspect"
-                          ? "secondary"
-                          : "default"
-                    }
-                  >
-                    {item.classification}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    score {item.score.toFixed(2)}
-                  </span>
-                </div>
+                {index < recentSeries.length - 1 && <Separator />}
               </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{item.timestamp}</span>
-                <span>ttl 24h</span>
-              </div>
-              {index < recentVerdicts.length - 1 && <Separator />}
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
     </div>
   );
 }
+
