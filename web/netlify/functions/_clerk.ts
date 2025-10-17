@@ -6,12 +6,8 @@ const clerk = createClerkClient({
   secretKey: process.env.CLERK_SECRET_KEY,
 });
 
-type VerifiedSession = Awaited<
-  ReturnType<(typeof clerk.sessions)["verifySession"]>
->;
-
 type AuthSuccess = {
-  session: VerifiedSession;
+  session: Awaited<ReturnType<typeof clerk.sessions.getSession>>;
 };
 
 type AuthError = {
@@ -42,7 +38,11 @@ export async function requireAuth(event: HandlerEvent): Promise<AuthSuccess | Au
   const token = authorization.slice("Bearer ".length).trim();
 
   try {
-    const session = await clerk.sessions.verifySession(token);
+    const session = await clerk.sessions.getSession(token);
+
+    if (!session) {
+      throw new Error("session not found");
+    }
 
     return { session };
   } catch (error) {
@@ -55,3 +55,4 @@ export async function requireAuth(event: HandlerEvent): Promise<AuthSuccess | Au
     };
   }
 }
+
