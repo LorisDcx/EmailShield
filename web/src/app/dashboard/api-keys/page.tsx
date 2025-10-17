@@ -1,4 +1,4 @@
-"use client";
+ï»¿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
@@ -182,7 +182,7 @@ export default function ApiKeysPage() {
             <div className="rounded-md border border-border/40 bg-muted/40 p-4 text-sm">
               <p className="font-semibold">New key created</p>
               <p className="text-muted-foreground">
-                Copy this secret now — it will not be shown again.
+                Copy this secret now â€” it will not be shown again.
               </p>
               <code className="mt-2 block break-all rounded bg-background/80 p-2">
                 {recentSecret.secret}
@@ -220,11 +220,11 @@ export default function ApiKeysPage() {
                   <p className="font-medium">
                     {key.label ?? "Untitled key"}{" "}
                     <span className="text-xs text-muted-foreground">
-                      (••••••{key.last4})
+                      (â€¢â€¢â€¢â€¢â€¢â€¢{key.last4})
                     </span>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Created {new Date(key.createdAt).toLocaleString()} ·
+                    Created {new Date(key.createdAt).toLocaleString()} Â·
                     {" "}
                     {key.revokedAt
                       ? `Revoked ${new Date(key.revokedAt).toLocaleString()}`
@@ -261,4 +261,5 @@ export default function ApiKeysPage() {
     </div>
   );
 }
+
 
