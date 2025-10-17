@@ -1,4 +1,5 @@
 import type { Handler } from "@netlify/functions";
+import { requireAuth } from "./_clerk";
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -8,6 +9,12 @@ export const handler: Handler = async (event) => {
     };
   }
 
+  const authResult = await requireAuth(event);
+  if ("error" in authResult) {
+    return authResult.error;
+  }
+
+  const { session } = authResult;
   const { keyId } = JSON.parse(event.body ?? "{}");
 
   if (!keyId) {
@@ -17,11 +24,12 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  // TODO: apply database update to mark API key as revoked.
+  // TODO: apply database update to mark API key as revoked for session.userId.
   return {
     statusCode: 200,
     body: JSON.stringify({
       id: keyId,
+      ownerId: session.userId,
       status: "revoked",
       revokedAt: new Date().toISOString(),
     }),

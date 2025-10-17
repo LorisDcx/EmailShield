@@ -1,10 +1,19 @@
 import type { Handler } from "@netlify/functions";
+import { requireAuth } from "./_clerk";
 
-export const handler: Handler = async () => {
-  // TODO: query usage_daily table filtered by account id and date range.
+export const handler: Handler = async (event) => {
+  const authResult = await requireAuth(event);
+  if ("error" in authResult) {
+    return authResult.error;
+  }
+
+  const { session } = authResult;
+
+  // TODO: query usage_daily table filtered by session.userId and date range.
   return {
     statusCode: 200,
     body: JSON.stringify({
+      ownerId: session.userId,
       totals: {
         ok: 6120,
         suspect: 912,
