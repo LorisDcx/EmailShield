@@ -44,13 +44,46 @@ export default async function UsagePage() {
   const authState = await auth();
   const token =
     (await authState?.getToken?.({ template: "netlify" })) ??
+    authState?.sessionToken ??
     (await authState?.getToken?.());
 
   if (!token) {
     redirect("/sign-in");
   }
 
-  const usage = await fetchUsage(token);
+  let usage: UsageResponse | null = null;
+
+  try {
+    usage = await fetchUsage(token);
+  } catch (error) {
+    console.error("Failed to load usage data", error);
+  }
+
+  if (!usage) {
+    return (
+      <div className="space-y-8">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-semibold tracking-tight">Usage</h1>
+          <p className="text-muted-foreground">
+            Track daily consumption to optimise cache strategy and quotas.
+          </p>
+        </div>
+
+        <Card className="border-border/40 bg-background/80">
+          <CardHeader>
+            <CardTitle>Usage data unavailable</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              We couldn’t reach the usage endpoint. Verify that your Netlify
+              environment variables (`DATABASE_URL`, Clerk keys) and the Railway
+              database are configured, then refresh.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const totalChecks =
     usage.totals.ok + usage.totals.suspect + usage.totals.disposable;
@@ -118,7 +151,3 @@ export default async function UsagePage() {
     </div>
   );
 }
-
-
-
-

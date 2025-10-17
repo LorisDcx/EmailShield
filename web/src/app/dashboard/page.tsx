@@ -51,16 +51,53 @@ export default async function DashboardHome() {
   const authState = await auth();
   const token =
     (await authState?.getToken?.({ template: "netlify" })) ??
+    authState?.sessionToken ??
     (await authState?.getToken?.());
 
   if (!token) {
     redirect("/sign-in");
   }
 
-  const [account, usage] = await Promise.all([
-    fetchWithToken<AccountResponse>("/api/me", token),
-    fetchWithToken<UsageResponse>("/api/admin-usage", token),
-  ]);
+  let account: AccountResponse | null = null;
+  let usage: UsageResponse | null = null;
+
+  try {
+    [account, usage] = await Promise.all([
+      fetchWithToken<AccountResponse>("/api/me", token),
+      fetchWithToken<UsageResponse>("/api/admin-usage", token),
+    ]);
+  } catch (error) {
+    console.error("Failed to load dashboard data", error);
+  }
+
+  if (!account || !usage) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Overview</h1>
+          <p className="text-muted-foreground">
+            Real-time insight into your MailShield activity.
+          </p>
+        </div>
+        <Card className="border-border/40 bg-background/80">
+          <CardHeader>
+            <CardTitle>We’re warming things up</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              We couldn’t fetch your usage just yet. This usually means the database
+              hasn’t been provisioned or Netlify env vars (`DATABASE_URL`, Clerk keys)
+              aren’t set.
+            </p>
+            <p>
+              Double-check your Railway Postgres connection and Netlify settings, then
+              refresh the page.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const totalChecks =
     usage.totals.ok + usage.totals.suspect + usage.totals.disposable;
@@ -162,5 +199,3 @@ export default async function DashboardHome() {
     </div>
   );
 }
-
-

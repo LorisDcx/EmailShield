@@ -11,7 +11,7 @@ export default function SignUpPage() {
             card: "shadow-xl border border-border/40",
           },
         }}
-        afterSignUpUrl="/dashboard"
+        forceRedirectUrl="/dashboard"
       />
     </div>
   );
